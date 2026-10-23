@@ -9,6 +9,12 @@ def build_mcp(db_path: str) -> FastMCP:
     # is protected by the Bearer middleware instead.
     mcp = FastMCP(
         "food-log",
+        instructions=(
+            "Food diary. Never call log_entry right away. First estimate calories, protein, fat and carbs "
+            "for the food and show them to the user (name, grams, kcal, P/F/C). Call log_entry only after "
+            "the user explicitly confirms (e.g. 'yes', 'save'). If the user corrects the numbers, show the "
+            "updated values and ask again."
+        ),
         stateless_http=True,
         json_response=True,
         streamable_http_path="/mcp",
@@ -17,7 +23,10 @@ def build_mcp(db_path: str) -> FastMCP:
 
     @mcp.tool()
     def log_entry(date: str, name: str, grams: float, kcal: float, protein: float, fat: float, carbs: float) -> dict:
-        """Save a food entry for a day (date as YYYY-MM-DD). Returns the stored entry with its id."""
+        """Save a food entry for a day (date as YYYY-MM-DD). Returns the stored entry with its id.
+
+        Call ONLY after the user has seen the kcal/protein/fat/carbs breakdown and explicitly confirmed
+        saving it. Never call this in the same turn in which the numbers are first proposed."""
         return repo.add_entry(
             db_path,
             repo.EntryIn(date=date, name=name, grams=grams, kcal=kcal, protein=protein, fat=fat, carbs=carbs),
