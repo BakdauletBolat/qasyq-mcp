@@ -1,0 +1,36 @@
+from mcp.server.fastmcp import FastMCP
+from mcp.server.transport_security import TransportSecuritySettings
+
+from app.entries import repo
+
+
+def build_mcp(db_path: str) -> FastMCP:
+    # Host/Origin checks are off: the endpoint sits behind a public domain and
+    # is protected by the Bearer middleware instead.
+    mcp = FastMCP(
+        "food-log",
+        stateless_http=True,
+        json_response=True,
+        streamable_http_path="/mcp",
+        transport_security=TransportSecuritySettings(enable_dns_rebinding_protection=False),
+    )
+
+    @mcp.tool()
+    def log_entry(date: str, name: str, grams: float, kcal: float, protein: float, fat: float, carbs: float) -> dict:
+        """Save a food entry for a day (date as YYYY-MM-DD). Returns the stored entry with its id."""
+        return repo.add_entry(
+            db_path,
+            repo.EntryIn(date=date, name=name, grams=grams, kcal=kcal, protein=protein, fat=fat, carbs=carbs),
+        )
+
+    @mcp.tool()
+    def get_day(date: str) -> dict:
+        """List all entries for a day (YYYY-MM-DD) with totals."""
+        return repo.get_day(db_path, date)
+
+    @mcp.tool()
+    def delete_entry(entry_id: int) -> dict:
+        """Delete an entry by id."""
+        return {"deleted": repo.delete_entry(db_path, entry_id), "id": entry_id}
+
+    return mcp
