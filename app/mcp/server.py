@@ -2,6 +2,7 @@ from mcp.server.fastmcp import FastMCP
 from mcp.server.transport_security import TransportSecuritySettings
 
 from app.entries import repo
+from app.weights import repo as weights_repo
 
 
 def build_mcp(db_path: str) -> FastMCP:
@@ -41,5 +42,15 @@ def build_mcp(db_path: str) -> FastMCP:
     def delete_entry(entry_id: int) -> dict:
         """Delete an entry by id."""
         return {"deleted": repo.delete_entry(db_path, entry_id), "id": entry_id}
+
+    @mcp.tool()
+    def log_weight(kg: float, recorded_at: str | None = None) -> dict:
+        """Save a body weight in kg. recorded_at is an ISO datetime (YYYY-MM-DDTHH:MM); defaults to now."""
+        return weights_repo.add_weight(db_path, weights_repo.WeightIn(kg=kg, recorded_at=recorded_at))
+
+    @mcp.tool()
+    def get_weights() -> dict:
+        """List body weight records for the last 3 months, oldest first."""
+        return weights_repo.get_last_months(db_path, months=3)
 
     return mcp
