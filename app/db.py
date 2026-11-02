@@ -15,6 +15,13 @@ CREATE TABLE IF NOT EXISTS entries (
 );
 CREATE INDEX IF NOT EXISTS idx_entries_date ON entries(date);
 
+CREATE TABLE IF NOT EXISTS weights (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    recorded_at TEXT NOT NULL,
+    kg          REAL NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_weights_recorded_at ON weights(recorded_at);
+
 CREATE TABLE IF NOT EXISTS oauth_clients (
     client_id     TEXT PRIMARY KEY,
     client_name   TEXT,

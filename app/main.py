@@ -8,6 +8,7 @@ from app.entries.routes import router as entries_router
 from app.mcp.auth import BearerAuthASGI
 from app.mcp.server import build_mcp
 from app.oauth.endpoints import router as oauth_router
+from app.weights.routes import router as weights_router
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -25,6 +26,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.settings = settings
     app.include_router(oauth_router)
     app.include_router(entries_router)
+    app.include_router(weights_router)
     # Registered last: serves /mcp, everything above takes precedence.
     app.mount("/", BearerAuthASGI(mcp_app, settings))
     return app
