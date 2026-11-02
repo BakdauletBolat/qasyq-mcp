@@ -38,6 +38,26 @@ def get_day(db_path: str, day: str) -> dict:
     return {"date": day, "entries": rows, "totals": totals}
 
 
+def get_range(db_path: str, start: str, end: str) -> dict:
+    start = date_type.fromisoformat(start).isoformat()
+    end = date_type.fromisoformat(end).isoformat()
+    if start > end:
+        raise ValueError("start must not be after end")
+    with connect(db_path) as conn:
+        days = [
+            dict(r)
+            for r in conn.execute(
+                "SELECT date, COUNT(*) AS entries, ROUND(SUM(kcal), 2) AS kcal, ROUND(SUM(protein), 2) AS protein, "
+                "ROUND(SUM(fat), 2) AS fat, ROUND(SUM(carbs), 2) AS carbs "
+                "FROM entries WHERE date BETWEEN ? AND ? GROUP BY date ORDER BY date",
+                (start, end),
+            )
+        ]
+    n = len(days)
+    avg = {k: round(sum(d[k] for d in days) / n, 2) for k in ("kcal", "protein", "fat", "carbs")} if n else {}
+    return {"start": start, "end": end, "days_logged": n, "average_per_logged_day": avg, "days": days}
+
+
 def delete_entry(db_path: str, entry_id: int) -> bool:
     with connect(db_path) as conn:
         return conn.execute("DELETE FROM entries WHERE id = ?", (entry_id,)).rowcount > 0

@@ -1,0 +1,80 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  :root { color-scheme: light dark; --fg:#1a1a1a; --muted:#6b6b6b; --line:#d8d8d8; --accent:#2f6fed; }
+  @media (prefers-color-scheme: dark) { :root { --fg:#eee; --muted:#9a9a9a; --line:#3a3a3a; --accent:#6c9bff; } }
+  body { margin:0; padding:12px; font:14px system-ui,sans-serif; color:var(--fg); background:transparent; }
+  .head { display:flex; gap:16px; align-items:baseline; margin-bottom:8px; flex-wrap:wrap; }
+  .big { font-size:24px; font-weight:600; }
+  .muted { color:var(--muted); }
+  svg { width:100%; height:auto; display:block; }
+  .axis { stroke:var(--line); } .lbl { fill:var(--muted); font-size:11px; }
+  .line { fill:none; stroke:var(--accent); stroke-width:2; } .dot { fill:var(--accent); }
+</style>
+</head>
+<body>
+<div id="app" class="muted">Загрузка…</div>
+<script>
+const app = document.getElementById("app");
+let nextId = 1;
+const send = (msg) => parent.postMessage({ jsonrpc: "2.0", ...msg }, "*");
+
+function render(data) {
+  const rows = (data && data.weights) || [];
+  if (!rows.length) { app.textContent = "Нет записей веса за 3 месяца."; return; }
+  const pts = rows.map(r => ({ t: new Date(r.recorded_at).getTime(), kg: r.kg }));
+  const last = pts[pts.length - 1], first = pts[0], delta = last.kg - first.kg;
+  const W = 640, H = 240, L = 40, R = 12, T = 12, B = 26;
+  const t0 = first.t, t1 = Math.max(last.t, t0 + 1);
+  let lo = Math.min(...pts.map(p => p.kg)), hi = Math.max(...pts.map(p => p.kg));
+  const pad = Math.max((hi - lo) * 0.15, 0.5); lo -= pad; hi += pad;
+  const x = t => L + (t - t0) / (t1 - t0) * (W - L - R);
+  const y = v => T + (hi - v) / (hi - lo) * (H - T - B);
+  let g = "";
+  for (let i = 0; i <= 3; i++) {
+    const v = lo + (hi - lo) * i / 3;
+    g += `<line class="axis" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/>` +
+         `<text class="lbl" x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${v.toFixed(1)}</text>`;
+  }
+  const fmt = t => new Date(t).toLocaleDateString("ru-RU", { day: "numeric", month: "short" });
+  g += `<text class="lbl" x="${L}" y="${H - 6}">${fmt(t0)}</text>` +
+       `<text class="lbl" x="${W - R}" y="${H - 6}" text-anchor="end">${fmt(t1)}</text>`;
+  const path = pts.map((p, i) => `${i ? "L" : "M"}${x(p.t).toFixed(1)},${y(p.kg).toFixed(1)}`).join(" ");
+  const dots = pts.map(p => `<circle class="dot" cx="${x(p.t)}" cy="${y(p.kg)}" r="3"><title>${fmt(p.t)}: ${p.kg} кг</title></circle>`).join("");
+  app.className = "";
+  app.innerHTML =
+    `<div class="head"><span class="big">${last.kg} кг</span>` +
+    `<span class="muted">${delta >= 0 ? "+" : ""}${delta.toFixed(1)} кг за период · ${pts.length} записей</span></div>` +
+    `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="График веса">${g}<path class="line" d="${path}"/>${dots}</svg>`;
+}
+
+function onResult(res) {
+  if (res.structuredContent) return render(res.structuredContent);
+  const text = (res.content || []).find(c => c.type === "text");
+  if (text) { try { render(JSON.parse(text.text)); } catch { app.textContent = text.text; } }
+}
+
+window.addEventListener("message", (e) => {
+  const m = e.data;
+  if (!m || m.jsonrpc !== "2.0") return;
+  if (m.method === "ui/notifications/tool-result") onResult(m.params || {});
+});
+
+const id = nextId++;
+send({ id, method: "ui/initialize", params: {
+  appInfo: { name: "weights-chart", version: "1.0.0" },
+  appCapabilities: {},
+  protocolVersion: "2025-11-21",
+}});
+window.addEventListener("message", function init(e) {
+  if (e.data && e.data.id === id) {
+    send({ method: "ui/notifications/initialized" });
+    window.removeEventListener("message", init);
+  }
+});
+</script>
+</body>
+</html>

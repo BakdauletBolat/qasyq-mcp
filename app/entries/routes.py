@@ -23,6 +23,14 @@ def day(date: str, request: Request):
         raise HTTPException(422, "date must be YYYY-MM-DD")
 
 
+@router.get("/range")
+def range_(start: str, end: str, request: Request):
+    try:
+        return repo.get_range(_db(request), start, end)
+    except ValueError:
+        raise HTTPException(422, "start/end must be YYYY-MM-DD and start <= end")
+
+
 @router.delete("/{entry_id}")
 def delete(entry_id: int, request: Request):
     if not repo.delete_entry(_db(request), entry_id):

@@ -47,7 +47,8 @@ food.example.com {
 Settings → Connectors → Add custom connector → URL `https://<домен>/mcp`.
 Claude сам зарегистрируется через `/register`, откроет страницу входа: введите `OWNER_PASSWORD`.
 
-Инструменты: `log_entry`, `get_day`, `delete_entry`, `log_weight`, `get_weights`.
+Инструменты: `log_entry`, `get_day`, `delete_entry`, `log_weight`, `get_weights`, `get_range`.
+`get_weights` отдаёт ещё и MCP App (`ui://weights/chart.html`): график веса прямо в чате, если клиент поддерживает MCP Apps.
 
 ## Эндпоинты
 
@@ -55,6 +56,7 @@ Claude сам зарегистрируется через `/register`, откр�
 - `POST /register` (RFC 7591): принимает `https://claude.ai/api/mcp/auth_callback` и `http://localhost|127.0.0.1:*`
 - `GET/POST /authorize`: вход по паролю, PKCE S256 обязателен
 - `POST /token`: `authorization_code` и `refresh_token` (ротация)
+- `GET /entries/range?start=&end=` (итоги по дням и средние за период)
 - `POST /weights` (`kg`, опционально `recorded_at`), `GET /weights/recent` (записи веса за 3 месяца)
 - `/mcp` (Streamable HTTP) и REST `/entries` требуют `Authorization: Bearer`; иначе 401 с `WWW-Authenticate: Bearer resource_metadata=...`
 

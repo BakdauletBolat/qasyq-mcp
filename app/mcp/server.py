@@ -1,8 +1,14 @@
+from pathlib import Path
+
 from mcp.server.fastmcp import FastMCP
 from mcp.server.transport_security import TransportSecuritySettings
 
 from app.entries import repo
 from app.weights import repo as weights_repo
+
+
+WEIGHTS_UI = "ui://weights/chart.html"
+UI_MIME = "text/html;profile=mcp-app"
 
 
 def build_mcp(db_path: str) -> FastMCP:
@@ -49,6 +55,15 @@ def build_mcp(db_path: str) -> FastMCP:
         return weights_repo.add_weight(db_path, weights_repo.WeightIn(kg=kg, recorded_at=recorded_at))
 
     @mcp.tool()
+    def get_range(start: str, end: str) -> dict:
+        """Per-day totals (kcal/protein/fat/carbs) and averages for a date range (YYYY-MM-DD, inclusive)."""
+        return repo.get_range(db_path, start, end)
+
+    @mcp.resource(WEIGHTS_UI, mime_type=UI_MIME)
+    def weights_chart() -> str:
+        return (Path(__file__).parent / "ui" / "weights.html").read_text(encoding="utf-8")
+
+    @mcp.tool(meta={"ui": {"resourceUri": WEIGHTS_UI}})
     def get_weights() -> dict:
         """List body weight records for the last 3 months, oldest first."""
         return weights_repo.get_last_months(db_path, months=3)
